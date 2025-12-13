@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="240">
+  <style>text{font-family:Arial,Helvetica,sans-serif;font-size:12px;}</style>
+  <text x="20" y="20">ガント</text>
+  <rect x="20" y="30" width="100" height="30" fill="#E74C3C" stroke="#000" />
+  <text x="130" y="50">今日ライン: #E74C3C</text>
+  <rect x="20" y="72" width="100" height="30" fill="#3498DB" stroke="#000" />
+  <text x="130" y="92">通常期間: #3498DB</text>
+  <rect x="20" y="114" width="100" height="30" fill="#E74C3C" stroke="#000" />
+  <text x="130" y="134">遅延: #E74C3C</text>
+  <rect x="20" y="156" width="100" height="30" fill="#95A5A6" stroke="#000" />
+  <text x="130" y="176">完了: #95A5A6</text>
+  <text x="260" y="20">ステータス</text>
+  <rect x="260" y="30" width="100" height="30" fill="#BDC3C7" stroke="#000" />
+  <text x="370" y="50">未着手: #BDC3C7</text>
+  <rect x="260" y="72" width="100" height="30" fill="#3498DB" stroke="#000" />
+  <text x="370" y="92">進行中: #3498DB</text>
+  <rect x="260" y="114" width="100" height="30" fill="#E74C3C" stroke="#000" />
+  <text x="370" y="134">遅延(ステータス): #E74C3C</text>
+  <rect x="260" y="156" width="100" height="30" fill="#2ECC71" stroke="#000" />
+  <text x="370" y="176">完了(ステータス): #2ECC71</text>
+</svg>
