@@ -111,15 +111,24 @@ def root_rels_xml() -> str:
     )
 
 
-def workbook_xml(sheet_names: Sequence[str]) -> str:
+def workbook_xml(sheet_names: Sequence[str], defined_names: Mapping[str, str] | None = None) -> str:
     sheets_xml = "".join(
         f"<sheet name='{escape(name)}' sheetId='{idx}' r:id='rId{idx}'/>"
         for idx, name in enumerate(sheet_names, start=1)
     )
+
+    defined_names_xml = ""
+    if defined_names:
+        defined_names_xml = "<definedNames>" + "".join(
+            f"<definedName name='{escape(name)}'>{escape(ref)}</definedName>"
+            for name, ref in defined_names.items()
+        ) + "</definedNames>"
+
     return (
         "<workbook xmlns='http://schemas.openxmlformats.org/spreadsheetml/2006/main' "
         "xmlns:r='http://schemas.openxmlformats.org/officeDocument/2006/relationships'>"
         f"<sheets>{sheets_xml}</sheets>"
+        f"{defined_names_xml}"
         "</workbook>"
     )
 
@@ -425,7 +434,16 @@ def case_master_sheet() -> str:
             ]
         )
 
-    drill_down_headers = ["案件選択", "施策ID", "親案件ID", "施策名", "開始日", "WBS リンク", "WBS シート名", "実進捗"]
+    drill_down_headers = [
+        "施策ID",
+        "親案件ID",
+        "施策名",
+        "開始日",
+        "WBS リンク",
+        "WBS シート名",
+        "実進捗",
+        "備考",
+    ]
     for col, header in enumerate(drill_down_headers, start=7):
         cells.append((2, col, header))
     cells.append((1, 7, "案件ドリルダウン"))
@@ -436,7 +454,7 @@ def case_master_sheet() -> str:
             3,
             7,
             Formula(
-                "IF($H$1=\"\",\"\",FILTER(Measure_Master!A2:G104,Measure_Master!B2:B104=$H$1,\"該当なし\"))"
+                "IF($H$1=\"\",\"\",IFERROR(FILTER(MeasureList,INDEX(MeasureList,,2)=$H$1),\"該当なし\"))"
             ),
         )
     )
@@ -444,7 +462,7 @@ def case_master_sheet() -> str:
     data_validations = (
         "<dataValidations count='1'>"
         "<dataValidation type='list' allowBlank='1' showDropDown='1' showErrorMessage='1' showInputMessage='1' errorStyle='stop' errorTitle='入力エラー' error='リストから選択してください' promptTitle='案件IDの選択' prompt='プルダウンから案件IDを選択してください' sqref='H1'>"
-        "<formula1>Case_Master!$A$2:$A$100</formula1>"
+        "<formula1>CaseIds</formula1>"
         "</dataValidation>"
         "</dataValidations>"
     )
@@ -479,7 +497,7 @@ def measure_master_sheet() -> str:
     data_validations = (
         "<dataValidations count='1'>"
         "<dataValidation type='list' allowBlank='0' showDropDown='1' showErrorMessage='1' showInputMessage='1' errorStyle='stop' errorTitle='入力エラー' error='リスト外の値は入力できません' promptTitle='案件IDの選択' prompt='プルダウンから案件IDを選択してください' sqref='B2:B104'>"
-        "<formula1>Case_Master!$A$2:$A$100</formula1>"
+        "<formula1>CaseIds</formula1>"
         "</dataValidation>"
         "</dataValidations>"
     )
@@ -543,13 +561,19 @@ def build_workbook(
     sheet_names.extend(["Case_Master", "Measure_Master", "Kanban_View"])
     sheets_xml.extend([case_master_sheet(), measure_master_sheet(), kanban_sheet()])
 
+    defined_names = {
+        "CaseIds": "Case_Master!$A$2:$A$100",
+        "MeasureList": "Measure_Master!$A$2:$H$104",
+        "CaseDrilldownArea": "Case_Master!$G$3:$N$104",
+    }
+
     vba_modules = load_vba_modules()
     vba_binary = vba_project_binary(vba_modules)
 
     with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("[Content_Types].xml", content_types_xml(len(sheets_xml)))
         zf.writestr("_rels/.rels", root_rels_xml())
-        zf.writestr("xl/workbook.xml", workbook_xml(sheet_names))
+        zf.writestr("xl/workbook.xml", workbook_xml(sheet_names, defined_names))
         zf.writestr("xl/_rels/workbook.xml.rels", workbook_rels_xml(len(sheets_xml)))
         zf.writestr("xl/styles.xml", styles_xml())
         zf.writestr("xl/vbaProject.bin", vba_binary)
