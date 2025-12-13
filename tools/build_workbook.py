@@ -142,7 +142,17 @@ def styles_xml() -> str:
         "<cellStyleXfs count='1'><xf numFmtId='0' fontId='0' fillId='0' borderId='0'/></cellStyleXfs>"
         "<cellXfs count='1'><xf numFmtId='0' fontId='0' fillId='0' borderId='0' xfId='0'/></cellXfs>"
         "<cellStyles count='1'><cellStyle name='標準' xfId='0' builtinId='0'/></cellStyles>"
-        "<dxfs count='0'/><tableStyles count='0' defaultTableStyle='TableStyleMedium9' defaultPivotStyle='PivotStyleLight16'/>"
+        "<dxfs count='8'>"
+        "<dxf><border><right style='medium'><color rgb='FFE74C3C'/></right></border></dxf>"
+        "<dxf><fill><patternFill patternType='solid'><fgColor rgb='FF95A5A6'/><bgColor indexed='64'/></patternFill></fill></dxf>"
+        "<dxf><fill><patternFill patternType='solid'><fgColor rgb='FFE74C3C'/><bgColor indexed='64'/></patternFill></fill></dxf>"
+        "<dxf><fill><patternFill patternType='solid'><fgColor rgb='FF3498DB'/><bgColor indexed='64'/></patternFill></fill></dxf>"
+        "<dxf><fill><patternFill patternType='solid'><fgColor rgb='FFBDC3C7'/><bgColor indexed='64'/></patternFill></fill></dxf>"
+        "<dxf><font><color rgb='FFFFFFFF'/></font><fill><patternFill patternType='solid'><fgColor rgb='FF3498DB'/><bgColor indexed='64'/></patternFill></fill></dxf>"
+        "<dxf><font><color rgb='FFFFFFFF'/></font><fill><patternFill patternType='solid'><fgColor rgb='FFE74C3C'/><bgColor indexed='64'/></patternFill></fill></dxf>"
+        "<dxf><font><color rgb='FFFFFFFF'/></font><fill><patternFill patternType='solid'><fgColor rgb='FF2ECC71'/><bgColor indexed='64'/></patternFill></fill></dxf>"
+        "</dxfs>"
+        "<tableStyles count='0' defaultTableStyle='TableStyleMedium9' defaultPivotStyle='PivotStyleLight16'/>"
         "</styleSheet>"
     )
 
@@ -266,6 +276,14 @@ def template_cells(sample: bool = False) -> List[Tuple[int, int, object]]:
     for col, header in enumerate(headers, start=1):
         cells.append((4, col, header))
 
+    cells.append((1, 11, "ガント開始日"))
+    cells.append((2, 11, Formula("TODAY()-3")))
+
+    gantt_start_col = 11
+    gantt_columns = 30
+    for offset in range(gantt_columns):
+        cells.append((3, gantt_start_col + offset, Formula(f"IF($K$2=\"\",\"\",$K$2+{offset})")))
+
     for row in range(5, 14):
         cells.append((row, 6, Formula(f"IF(OR(D{row}='',E{row}=''),' ',WORKDAY(D{row},E{row}-1,Config!$B$4:$B$20))")))
         cells.append((row, 8, Formula(f"IFS(G{row}=1,'完了',AND(F{row}<TODAY(),G{row}<1),'遅延',AND(D{row}<=TODAY(),G{row}<1),'進行中',TRUE,'未着手')")))
@@ -321,7 +339,41 @@ def template_data_validations() -> str:
 
 
 def template_sheet(sample: bool = False) -> str:
-    return worksheet_xml(template_cells(sample), data_validations=template_data_validations())
+    return worksheet_xml(
+        template_cells(sample),
+        data_validations=template_data_validations(),
+        conditional_formattings=template_conditional_formattings(),
+    )
+
+
+def template_conditional_formattings() -> List[str]:
+    start_row = 5
+    end_row = 104
+    gantt_start_col = 11
+    gantt_cols = 30
+    gantt_range = f"{cell_ref(start_row, gantt_start_col)}:{cell_ref(end_row, gantt_start_col + gantt_cols - 1)}"
+    start_col_letter = col_letter(gantt_start_col)
+
+    gantt_rules = f"""
+<conditionalFormatting sqref='{gantt_range}'>
+<cfRule type='expression' dxfId='0' priority='1'><formula>{start_col_letter}$3=TODAY()</formula></cfRule>
+<cfRule type='expression' dxfId='1' priority='2'><formula>AND($D{start_row}<>"",$E{start_row}<>"",{start_col_letter}$3>=$D{start_row},{start_col_letter}$3<=$F{start_row},$H{start_row}="完了")</formula></cfRule>
+<cfRule type='expression' dxfId='2' priority='3'><formula>AND($D{start_row}<>"",$E{start_row}<>"",{start_col_letter}$3>=$D{start_row},{start_col_letter}$3<=$F{start_row},$H{start_row}="遅延")</formula></cfRule>
+<cfRule type='expression' dxfId='3' priority='4'><formula>AND($D{start_row}<>"",$E{start_row}<>"",{start_col_letter}$3>=$D{start_row},{start_col_letter}$3<=$F{start_row},$H{start_row}<>"",$H{start_row}<>"完了",$H{start_row}<>"遅延")</formula></cfRule>
+</conditionalFormatting>
+"""
+
+    status_range = f"{cell_ref(start_row, 8)}:{cell_ref(end_row, 8)}"
+    status_rules = f"""
+<conditionalFormatting sqref='{status_range}'>
+<cfRule type='expression' dxfId='4' priority='5'><formula>$H{start_row}="未着手"</formula></cfRule>
+<cfRule type='expression' dxfId='5' priority='6'><formula>$H{start_row}="進行中"</formula></cfRule>
+<cfRule type='expression' dxfId='6' priority='7'><formula>$H{start_row}="遅延"</formula></cfRule>
+<cfRule type='expression' dxfId='7' priority='8'><formula>$H{start_row}="完了"</formula></cfRule>
+</conditionalFormatting>
+"""
+
+    return [gantt_rules, status_rules]
 
 
 def case_master_sheet() -> str:
