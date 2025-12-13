@@ -4,11 +4,11 @@
 `INDIRECT` と `FILTER` を多数の PRJ シートに対して呼び出した際の再計算時間を把握し、自動計算で運用できる上限と、手動計算へ切り替える際の手順をまとめる。
 
 ### ブック生成手順
-`tools/build_workbook.py` で任意枚数の PRJ シートを含む検証用ブックを作れる。`--sample-first` を付けると最初の PRJ シートにサンプルタスクを埋め込む。
+`tools/build_workbook.py` で任意枚数の PRJ シートを含む検証用ブックを作れる。`--sample-first` を付けると最初の PRJ シートにサンプルタスクを埋め込む。複数シート全てにダミータスクを置いて `FILTER` のヒット件数を安定させたい場合は `--sample-all` を利用する。
 
 ```bash
-# 例: 30 枚の PRJ シートを持つブックを生成
-python tools/build_workbook.py --projects 30 --sample-first --output ./ModernExcelPMS_30.xlsx
+# 例: 30 枚の PRJ シートを持つブックを生成（全シートにサンプル行を配置）
+python tools/build_workbook.py --projects 30 --sample-all --output ./ModernExcelPMS_30.xlsx
 ```
 
 生成時間とファイルサイズはシート枚数にほぼ比例し、生成だけなら 60 枚でも数十 ms 程度で終わる。
@@ -23,10 +23,11 @@ python tools/build_workbook.py --projects 30 --sample-first --output ./ModernExc
 1. 上記で生成したブックを Excel で開く。
 2. `Kanban_View!B2` で複数の PRJ シートを順に選択し、`INDIRECT`/`FILTER` が多く発火する状態を再現する。
 3. 直後に `Application.CalculateFullRebuild` を実行し、処理時間をストップウォッチまたは VBA で記録する。
-4. シート枚数を 10 → 30 → 60 と増やし、計算時間の伸びを比較する（ボラティリティのため線形増加が目安）。
+   - `docs/vba/manual_calculation.bas` を標準モジュールとして取り込むと、計算モードの切り替えと経過時間記録が Alt+F8 から実行できる。
+4. シート枚数を 10 → 30 → 60 と増やし、計算時間の伸びを比較する（ボラティリティのため線形増加が目安）。計測結果は `docs/recalc_performance_report.md` に追記する。
 
 ### 手動再計算トグル用 VBA の試作例
-再計算を手動に切り替える場合は、以下のような標準モジュールを追加して `Alt+F8` から実行する。必要に応じてクイックアクセスツールバーへ登録すると便利。
+再計算を手動に切り替える場合は、以下のような標準モジュールを追加して `Alt+F8` から実行する。必要に応じてクイックアクセスツールバーへ登録すると便利。`docs/vba/manual_calculation.bas` に同等コードを用意しているのでインポートすれば入力不要。
 
 ```vba
 Option Explicit
