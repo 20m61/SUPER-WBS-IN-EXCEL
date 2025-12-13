@@ -6,6 +6,7 @@ Modern Excel PMS の雛形ブックを自動生成するスクリプト。
 from __future__ import annotations
 
 from dataclasses import dataclass
+import argparse
 from pathlib import Path
 from typing import List, Sequence, Tuple
 from xml.sax.saxutils import escape
@@ -417,27 +418,24 @@ def kanban_sheet() -> str:
 
 # --------------------------- メイン ---------------------------
 
-def build_workbook() -> None:
-    sheet_builders = [
-        config_sheet,
-        lambda: template_sheet(sample=False),
-        lambda: template_sheet(sample=True),
-        case_master_sheet,
-        measure_master_sheet,
-        kanban_sheet,
-    ]
-    sheet_names = [
-        "Config",
-        "Template",
-        "PRJ_001",
-        "Case_Master",
-        "Measure_Master",
-        "Kanban_View",
-    ]
+def build_workbook(project_count: int, sample_first_project: bool, output_path: Path) -> None:
+    """指定した枚数の PRJ シートを生成してブックを書き出す。"""
 
-    sheets_xml = [builder() for builder in sheet_builders]
+    # Config / Template
+    sheet_names = ["Config", "Template"]
+    sheets_xml: List[str] = [config_sheet(), template_sheet(sample=False)]
 
-    with zipfile.ZipFile(OUTPUT_PATH, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+    # PRJ_xxx をまとめて生成
+    for idx in range(1, project_count + 1):
+        sheet_names.append(f"PRJ_{idx:03d}")
+        is_sample = sample_first_project and idx == 1
+        sheets_xml.append(template_sheet(sample=is_sample))
+
+    # 末尾のマスターシート群
+    sheet_names.extend(["Case_Master", "Measure_Master", "Kanban_View"])
+    sheets_xml.extend([case_master_sheet(), measure_master_sheet(), kanban_sheet()])
+
+    with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("[Content_Types].xml", content_types_xml(len(sheets_xml)))
         zf.writestr("_rels/.rels", root_rels_xml())
         zf.writestr("xl/workbook.xml", workbook_xml(sheet_names))
@@ -447,8 +445,27 @@ def build_workbook() -> None:
         for idx, xml in enumerate(sheets_xml, start=1):
             zf.writestr(f"xl/worksheets/sheet{idx}.xml", xml)
 
-    print(f"ブックを生成しました: {OUTPUT_PATH}")
+    print(f"ブックを生成しました: {output_path}")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Modern Excel PMS 雛形を生成する")
+    parser.add_argument("--projects", type=int, default=1, help="生成する PRJ_xxx シート数")
+    parser.add_argument(
+        "--sample-first",
+        action="store_true",
+        help="最初の PRJ シートにサンプルタスクを埋め込む",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=OUTPUT_PATH,
+        help="出力先パス (.xlsx)",
+    )
+    args = parser.parse_args()
+
+    build_workbook(args.projects, args.sample_first, args.output)
 
 
 if __name__ == "__main__":
-    build_workbook()
+    main()
