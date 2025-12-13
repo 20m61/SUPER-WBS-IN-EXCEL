@@ -19,8 +19,8 @@
   - `Config`: 祝日・担当者のサンプルと、データ検証用の候補リスト。
   - `Template` / `PRJ_001`: Lv/タスク/担当/開始日/工数/終了日/進捗率/ステータス列と、`WORKDAY`・`IFS`・`AVERAGE(FILTER())` による進捗算出。
   - `Case_Master`: 案件ごとの施策数 `COUNTIF`、平均進捗 `AVERAGEIF`。
-  - `Measure_Master`: `HYPERLINK` による WBS へのジャンプ、`INDIRECT` で進捗を吸い上げ。
-  - `Kanban_View`: `B2` のデータ検証で WBS シート名を選択し、`FILTER`/`LET`/`MAP` で ToDo/Doing/Done のカード文字列を生成。
+  - `Measure_Master`: `HYPERLINK` による WBS へのジャンプ、`IFERROR(INDIRECT())` で参照切れ時は「未リンク」として進捗を吸い上げ。
+  - `Kanban_View`: `B2` のデータ検証で WBS シート名を選択し、`FILTER`/`LET`/`MAP` を `IFERROR` でガードして ToDo/Doing/Done のカード文字列を生成。
 
 ## 次に着手すべきタスク
 - 条件付き書式でガント・ステータス色を付与する（Phase 2）。
