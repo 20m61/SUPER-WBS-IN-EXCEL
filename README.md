@@ -166,6 +166,15 @@ python tools/build_workbook.py
 - **Kanban_View**: `B2` のプルダウンから WBS シート名を選択し、`FILTER`/`LET`/`MAP` で To Do / Doing / Done のカード文字列をスピル表示。
 - **VBA モジュール**: `docs/vba` 配下の `modWbsCommands`（行移動・テンプレート複製・ステータス更新）、`Kanban_View`（ダブルクリックイベント）、`ThisWorkbook`（シート名採番）、`modProtection`（保護ユーティリティ）を `xl/vbaProject.bin` として同梱。
 
+`tools/build_workbook.py` はレポート生成にも対応しています。以下のオプションを組み合わせると、ブックの構成をテキストと PDF で同時に保存できます。
+
+```bash
+python tools/build_workbook.py --projects 3 --sample-first --output ModernExcelPMS.xlsm \
+  --report-output workbook_report.md --pdf-output workbook_report.pdf
+```
+
+上記の例では、PRJ シート 3 枚のブックを作成し、概要レポート（案件・施策の一覧やステータス候補など）を Markdown と PDF で出力します。
+
 ### マクロ操作手順と手動テストメモ
 以下の操作を手元の Excel で確認し、ボタン・イベントが意図通り動くことを確認した。
 
