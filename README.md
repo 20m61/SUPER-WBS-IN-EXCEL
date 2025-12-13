@@ -155,15 +155,29 @@ python tools/build_workbook.py
 
 ---
 
-## 11. 残課題 / TODO
+## 11. VBA モジュール構成（Phase 3 で実装）
+VBA で自動化する主要機能と配置モジュールを事前に定義しておきます。`tools/build_workbook.py` の `VBA_MODULE_PLAN` でも同じ構成を持ち、後続のコード生成で参照します。
+
+- **標準モジュール `modWbsCommands`**
+  - `MoveTaskRowUp` / `MoveTaskRowDown`: `Template` / `PRJ_xxx` シートの Up/Down ボタンから呼び出し、選択行を上下にスワップする。
+  - `DuplicateTemplateSheet`: `Template` を複製し、`ThisWorkbook.NextProjectSheetName` で採番したシート名を付与する。
+  - `UpdateTaskStatusFromKanban`: カンバンセルから対象タスクを特定し、WBS 側のステータスを書き換える共通処理。
+- **シートモジュール `Kanban_View`**
+  - `Worksheet_BeforeDoubleClick`: カードセルのダブルクリックで `UpdateTaskStatusFromKanban` を呼び出し、セル編集をキャンセルする。
+- **ThisWorkbook モジュール**
+  - `NextProjectSheetName`: 既存の `PRJ_xxx` を走査して次の連番を返し、テンプレート複製時のシート名として使用する。
+
+---
+
+## 12. 残課題 / TODO
 開発を進めるにあたり、現時点で決めきれていない事項や追加で詰めるべきタスクを整理します。
 
-1. **VBA モジュール構成の明文化**: 行入れ替え・シート複製・ダブルクリックイベントをどのモジュール（標準/シート/ThisWorkbook）に配置するかを決め、プロシージャ名を統一する。
+1. **VBA 実装**: セクション 11 で定義したモジュール構成とプロシージャ名に沿って、行入れ替え・テンプレート複製・ダブルクリック更新のコードを実装し、ブック出力を `.xlsm` 化する。
 2. **エラーハンドリング方針**: `INDIRECT` で参照先が存在しない場合の表示（空欄／エラーメッセージ）や、データ検証外の値が入力された際の挙動を定義する。
 3. **パフォーマンス確認**: WBS が多数になる場合に `INDIRECT`・`FILTER` が重くならないかを検証し、必要ならマクロでの再計算制御を検討する。
 4. **テンプレート保護レベル**: `Template`・`Config` を保護するかどうか、パスワード設定の有無、保護範囲（ガント列のみ編集不可など）を決定する。
 
 ---
 
-## 12. ライセンス
+## 13. ライセンス
 本リポジトリのライセンスは [LICENSE](LICENSE) を参照してください。
