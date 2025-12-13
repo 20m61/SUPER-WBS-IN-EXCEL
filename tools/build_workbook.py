@@ -1,6 +1,6 @@
 """
 Modern Excel PMS の雛形ブックを自動生成するスクリプト。
-外部ライブラリに依存せず、OpenXML を直接書き出して `ModernExcelPMS.xlsx` を生成する。
+外部ライブラリに依存せず、OpenXML を直接書き出して `ModernExcelPMS.xlsm` を生成する。
 """
 
 from __future__ import annotations
@@ -8,11 +8,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 import argparse
 from pathlib import Path
-from typing import List, Sequence, Tuple
+from typing import List, Mapping, Sequence, Tuple
 from xml.sax.saxutils import escape
 import zipfile
 
-OUTPUT_PATH = Path(__file__).resolve().parent.parent / "ModernExcelPMS.xlsx"
+OUTPUT_PATH = Path(__file__).resolve().parent.parent / "ModernExcelPMS.xlsm"
+VBA_SOURCE_DIR = Path(__file__).resolve().parent.parent / "docs" / "vba"
 
 
 @dataclass
@@ -94,9 +95,10 @@ def content_types_xml(sheet_count: int) -> str:
         "<Default Extension='rels' ContentType='application/vnd.openxmlformats-package.relationships+xml'/>"
         "<Default Extension='xml' ContentType='application/xml'/>"
         "<Override PartName='/xl/workbook.xml' "
-        "ContentType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml'/>"
+        "ContentType='application/vnd.ms-excel.sheet.macroEnabled.main+xml'/>"
         f"{overrides}"
         "<Override PartName='/xl/styles.xml' ContentType='application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml'/>"
+        "<Override PartName='/xl/vbaProject.bin' ContentType='application/vnd.ms-office.vbaProject'/>"
         "</Types>"
     )
 
@@ -130,6 +132,9 @@ def workbook_rels_xml(sheet_count: int) -> str:
     rels += (
         f"<Relationship Id='rId{sheet_count + 1}' Type='http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles' Target='styles.xml'/>"
     )
+    rels += (
+        f"<Relationship Id='rId{sheet_count + 2}' Type='http://schemas.microsoft.com/office/2006/relationships/vbaProject' Target='vbaProject.bin'/>"
+    )
     return f"<Relationships xmlns='http://schemas.openxmlformats.org/package/2006/relationships'>{rels}</Relationships>"
 
 
@@ -155,6 +160,33 @@ def styles_xml() -> str:
         "<tableStyles count='0' defaultTableStyle='TableStyleMedium9' defaultPivotStyle='PivotStyleLight16'/>"
         "</styleSheet>"
     )
+
+
+def load_vba_modules() -> Mapping[str, str]:
+    modules: dict[str, str] = {}
+    if not VBA_SOURCE_DIR.exists():
+        return modules
+
+    for path in sorted(VBA_SOURCE_DIR.glob("*.bas")):
+        modules[path.stem] = path.read_text(encoding="utf-8")
+
+    for path in sorted(VBA_SOURCE_DIR.glob("*.cls")):
+        modules[path.stem] = path.read_text(encoding="utf-8")
+
+    return modules
+
+
+def vba_project_binary(modules: Mapping[str, str]) -> bytes:
+    header = ["' Modern Excel PMS VBA project", "' 自動生成される各モジュールの内容"]
+    lines: List[str] = header.copy()
+
+    for name, body in modules.items():
+        normalized_body = body.replace("\r\n", "\n").replace("\r", "\n")
+        lines.append(f"' ----- {name} -----")
+        lines.append(normalized_body)
+        lines.append("'")
+
+    return "\r\n".join(lines).encode("utf-8")
 
 
 # --------------------------- VBA モジュール計画 ---------------------------
@@ -511,12 +543,16 @@ def build_workbook(
     sheet_names.extend(["Case_Master", "Measure_Master", "Kanban_View"])
     sheets_xml.extend([case_master_sheet(), measure_master_sheet(), kanban_sheet()])
 
+    vba_modules = load_vba_modules()
+    vba_binary = vba_project_binary(vba_modules)
+
     with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("[Content_Types].xml", content_types_xml(len(sheets_xml)))
         zf.writestr("_rels/.rels", root_rels_xml())
         zf.writestr("xl/workbook.xml", workbook_xml(sheet_names))
         zf.writestr("xl/_rels/workbook.xml.rels", workbook_rels_xml(len(sheets_xml)))
         zf.writestr("xl/styles.xml", styles_xml())
+        zf.writestr("xl/vbaProject.bin", vba_binary)
 
         for idx, xml in enumerate(sheets_xml, start=1):
             zf.writestr(f"xl/worksheets/sheet{idx}.xml", xml)
@@ -541,7 +577,7 @@ def main() -> None:
         "--output",
         type=Path,
         default=OUTPUT_PATH,
-        help="出力先パス (.xlsx)",
+        help="出力先パス (.xlsm)",
     )
     args = parser.parse_args()
     build_workbook(args.projects, args.sample_first, args.sample_all, args.output)
