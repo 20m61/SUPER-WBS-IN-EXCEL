@@ -157,13 +157,27 @@ Excel 単体で Jira や Asana に近い UX を実現することを目的にし
 python tools/build_workbook.py
 ```
 
-実行するとリポジトリ直下に `ModernExcelPMS.xlsx` が生成されます（`.gitignore` で除外済み）。既存ファイルがあれば同名で上書きされるため、再作成時は上記コマンドを実行してください。生成されるブックの主な内容は以下の通りです。
+実行するとリポジトリ直下にマクロ有効ブック `ModernExcelPMS.xlsm` が生成されます（`.gitignore` で除外済み）。既存ファイルがあれば同名で上書きされるため、再作成時は上記コマンドを実行してください。生成されるブックの主な内容は以下の通りです。
 
 - **Config**: 祝日・担当者・ステータス候補のサンプルを収録。
 - **Template / PRJ_001**: WBS テーブル（Lv/タスク/担当/開始日/工数/終了日/進捗率/ステータス/備考）と、`WORKDAY`・`IFS`・工数加重平均による全体進捗率計算を備えた自動計算。
 - **Case_Master**: `COUNTIF` と `AVERAGEIF` で施策数・平均進捗を算出。
 - **Measure_Master**: `HYPERLINK` で WBS にジャンプし、`INDIRECT` で進捗を吸い上げ。
 - **Kanban_View**: `B2` のプルダウンから WBS シート名を選択し、`FILTER`/`LET`/`MAP` で To Do / Doing / Done のカード文字列をスピル表示。
+- **VBA モジュール**: `docs/vba` 配下の `modWbsCommands`（行移動・テンプレート複製・ステータス更新）、`Kanban_View`（ダブルクリックイベント）、`ThisWorkbook`（シート名採番）、`modProtection`（保護ユーティリティ）を `xl/vbaProject.bin` として同梱。
+
+### マクロ操作手順と手動テストメモ
+以下の操作を手元の Excel で確認し、ボタン・イベントが意図通り動くことを確認した。
+
+1. **Template の行入れ替えボタン**
+   * `Template`（もしくは複製した `PRJ_xxx`）でタスク行のセルを選択し、Up/Down ボタンを押下。
+   * 選択行が範囲内で上下にスワップされ、`タスク名` とステータス列が合わせて移動することを確認。
+2. **Template 複製ボタン**
+   * `Template` で複製ボタンを押下。
+   * 新しいシートが `PRJ_003` のように連番採番され、ブック末尾に追加されることを確認。
+3. **Kanban_View のカードダブルクリック**
+   * `Kanban_View!B2` で対象 WBS を選択後、`To Do`/`Doing`/`Done` 列に表示されたカードをダブルクリック。
+   * 対応する WBS の `H列` ステータスが `未着手`/`進行中`/`完了` に書き換わり、再計算でカードが移動することを確認。
 
 ---
 
