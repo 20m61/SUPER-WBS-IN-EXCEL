@@ -146,6 +146,77 @@ def styles_xml() -> str:
     )
 
 
+# --------------------------- VBA モジュール計画 ---------------------------
+
+
+@dataclass(frozen=True)
+class VBAProcedurePlan:
+    """VBA プロシージャの名称と役割をまとめる。"""
+
+    name: str
+    description: str
+
+
+@dataclass(frozen=True)
+class VBAModulePlan:
+    """VBA モジュールの種類と配置方針を保持する。"""
+
+    module_type: str  # Standard / Worksheet / ThisWorkbook
+    module_name: str
+    description: str
+    procedures: List[VBAProcedurePlan]
+
+
+# 後続の VBA 自動生成で参照するモジュール配置と主要プロシージャ
+VBA_MODULE_PLAN: List[VBAModulePlan] = [
+    VBAModulePlan(
+        module_type="Standard",
+        module_name="modWbsCommands",
+        description="行入れ替えやテンプレート複製など、WBS シート共通のコマンド群を置く。",
+        procedures=[
+            VBAProcedurePlan(
+                name="MoveTaskRowUp",
+                description="選択行を一行上へスワップする。Up/Down ボタンのマクロ割当先。",
+            ),
+            VBAProcedurePlan(
+                name="MoveTaskRowDown",
+                description="選択行を一行下へスワップする。Up/Down ボタンのマクロ割当先。",
+            ),
+            VBAProcedurePlan(
+                name="DuplicateTemplateSheet",
+                description="Template を複製し、ThisWorkbook の採番関数から取得したシート名で貼り付ける。",
+            ),
+            VBAProcedurePlan(
+                name="UpdateTaskStatusFromKanban",
+                description="カンバンのセルから対象タスクを特定し、ステータスを書き換える共通処理。",
+            ),
+        ],
+    ),
+    VBAModulePlan(
+        module_type="Worksheet",
+        module_name="Kanban_View",
+        description="カンバンシートのイベント ハンドラを保持。ダブルクリックでステータス更新を呼び出す。",
+        procedures=[
+            VBAProcedurePlan(
+                name="Worksheet_BeforeDoubleClick",
+                description="カードセルのダブルクリックで UpdateTaskStatusFromKanban を呼び出し、イベントをキャンセルする。",
+            ),
+        ],
+    ),
+    VBAModulePlan(
+        module_type="ThisWorkbook",
+        module_name="ThisWorkbook",
+        description="ブック全体で共有するユーティリティを定義。テンプレート複製時のシート名採番を行う。",
+        procedures=[
+            VBAProcedurePlan(
+                name="NextProjectSheetName",
+                description="既存の PRJ_xxx を走査し、次に付与する連番シート名を返す。",
+            ),
+        ],
+    ),
+]
+
+
 # --------------------------- シート定義 ---------------------------
 
 def config_sheet() -> str:
