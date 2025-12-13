@@ -194,6 +194,25 @@ VBA_MODULE_PLAN: List[VBAModulePlan] = [
         ],
     ),
     VBAModulePlan(
+        module_type="Standard",
+        module_name="modProtection",
+        description="シート保護の一括適用・解除を行い、マクロ操作時の保護エラーを防ぐ。",
+        procedures=[
+            VBAProcedurePlan(
+                name="UnprotectAllSheets",
+                description="全シートの保護をまとめて解除する。保護パスワードは定数で集中管理する。",
+            ),
+            VBAProcedurePlan(
+                name="ProtectAllSheets",
+                description="編集可能セルだけを解放した状態で保護をかけ直す。UserInterfaceOnly を True に設定してマクロ操作を許可。",
+            ),
+            VBAProcedurePlan(
+                name="ReapplyProtection",
+                description="解除→再保護を一括実行するラッパー。設定変更時の再適用に使う。",
+            ),
+        ],
+    ),
+    VBAModulePlan(
         module_type="Worksheet",
         module_name="Kanban_View",
         description="カンバンシートのイベント ハンドラを保持。ダブルクリックでステータス更新を呼び出す。",
