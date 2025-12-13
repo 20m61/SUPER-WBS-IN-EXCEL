@@ -437,7 +437,12 @@ def kanban_sheet() -> str:
 
 # --------------------------- メイン ---------------------------
 
-def build_workbook(project_count: int, sample_first_project: bool, output_path: Path) -> None:
+def build_workbook(
+    project_count: int,
+    sample_first_project: bool,
+    sample_all_projects: bool,
+    output_path: Path,
+) -> None:
     """指定した枚数の PRJ シートを生成してブックを書き出す。"""
 
     # Config / Template
@@ -447,7 +452,7 @@ def build_workbook(project_count: int, sample_first_project: bool, output_path: 
     # PRJ_xxx をまとめて生成
     for idx in range(1, project_count + 1):
         sheet_names.append(f"PRJ_{idx:03d}")
-        is_sample = sample_first_project and idx == 1
+        is_sample = sample_all_projects or (sample_first_project and idx == 1)
         sheets_xml.append(template_sheet(sample=is_sample))
 
     # 末尾のマスターシート群
@@ -476,14 +481,18 @@ def main() -> None:
         help="最初の PRJ シートにサンプルタスクを埋め込む",
     )
     parser.add_argument(
+        "--sample-all",
+        action="store_true",
+        help="全ての PRJ シートにサンプルタスクを埋め込む",
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         default=OUTPUT_PATH,
         help="出力先パス (.xlsx)",
     )
     args = parser.parse_args()
-
-    build_workbook(args.projects, args.sample_first, args.output)
+    build_workbook(args.projects, args.sample_first, args.sample_all, args.output)
 
 
 if __name__ == "__main__":
