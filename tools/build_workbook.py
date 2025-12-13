@@ -180,7 +180,15 @@ def template_cells(sample: bool = False) -> List[Tuple[int, int, object]]:
         cells.append((row, 8, Formula(f"IFS(G{row}=1,'完了',AND(F{row}<TODAY(),G{row}<1),'遅延',AND(D{row}<=TODAY(),G{row}<1),'進行中',TRUE,'未着手')")))
 
     cells.append((1, 10, "全体進捗"))
-    cells.append((2, 10, Formula("IFERROR(AVERAGE(FILTER(G5:G104,G5:G104<>\"\")),0)")))
+    cells.append(
+        (
+            2,
+            10,
+            Formula(
+                "LET(_eff,E5:E104,_prg,G5:G104,_total,SUM(_eff),IF(_total=0,0,SUMPRODUCT(_eff,_prg)/_total))"
+            ),
+        )
+    )
 
     if sample:
         cells.extend(
