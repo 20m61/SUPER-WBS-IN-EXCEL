@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import argparse
+from datetime import datetime
 from pathlib import Path
 from typing import List, Mapping, Sequence, Tuple
 from xml.sax.saxutils import escape
@@ -14,6 +15,16 @@ import zipfile
 
 OUTPUT_PATH = Path(__file__).resolve().parent.parent / "ModernExcelPMS.xlsm"
 VBA_SOURCE_DIR = Path(__file__).resolve().parent.parent / "docs" / "vba"
+
+# 共有データセット（レポート生成とシート生成の両方で再利用する）
+HOLIDAYS = ["2024-01-01", "2024-02-12", "2024-04-29", "2024-05-03", "2024-05-04", "2024-05-05"]
+MEMBERS = ["PM_佐藤", "TL_田中", "DEV_鈴木", "QA_伊藤"]
+STATUSES = ["未着手", "進行中", "遅延", "完了"]
+CASES = [("CASE-001", "Web 刷新案件"), ("CASE-002", "新規 SFA 導入")]
+MEASURES = [
+    ("ME-001", "CASE-001", "LP 改修", "2024-05-07", "PRJ_001"),
+    ("ME-002", "CASE-002", "SFA 導入 PoC", "2024-05-13", "PRJ_002"),
+]
 
 
 @dataclass
@@ -299,14 +310,11 @@ def config_sheet() -> str:
         (1, 6, "ステータス候補"),
         (2, 6, "値"),
     ]
-    holidays = ["2024-01-01", "2024-02-12", "2024-04-29", "2024-05-03", "2024-05-04", "2024-05-05"]
-    for idx, day in enumerate(holidays, start=4):
+    for idx, day in enumerate(HOLIDAYS, start=4):
         cells.append((idx, 2, day))
-    members = ["PM_佐藤", "TL_田中", "DEV_鈴木", "QA_伊藤"]
-    for idx, member in enumerate(members, start=4):
+    for idx, member in enumerate(MEMBERS, start=4):
         cells.append((idx, 4, member))
-    statuses = ["未着手", "進行中", "遅延", "完了"]
-    for idx, status in enumerate(statuses, start=4):
+    for idx, status in enumerate(STATUSES, start=4):
         cells.append((idx, 6, status))
     return worksheet_xml(cells)
 
@@ -423,8 +431,7 @@ def case_master_sheet() -> str:
     for col, header in enumerate(headers, start=1):
         cells.append((1, col, header))
 
-    cases = [("CASE-001", "Web 刷新案件"), ("CASE-002", "新規 SFA 導入")]
-    for idx, (case_id, name) in enumerate(cases, start=2):
+    for idx, (case_id, name) in enumerate(CASES, start=2):
         cells.extend(
             [
                 (idx, 1, case_id),
@@ -476,12 +483,7 @@ def measure_master_sheet() -> str:
     for col, header in enumerate(headers, start=1):
         cells.append((1, col, header))
 
-    measures = [
-        ("ME-001", "CASE-001", "LP 改修", "2024-05-07", "PRJ_001"),
-        ("ME-002", "CASE-002", "SFA 導入 PoC", "2024-05-13", "PRJ_002"),
-    ]
-
-    for idx, (mid, cid, name, start, sheet_name) in enumerate(measures, start=2):
+    for idx, (mid, cid, name, start, sheet_name) in enumerate(MEASURES, start=2):
         cells.extend(
             [
                 (idx, 1, mid),
@@ -537,6 +539,127 @@ def kanban_sheet() -> str:
     return worksheet_xml(cells, data_validations=data_validations)
 
 
+# --------------------------- レポート生成 ---------------------------
+
+def generate_report_lines(
+    project_count: int,
+    sample_first_project: bool,
+    sample_all_projects: bool,
+    workbook_path: Path,
+) -> List[str]:
+    """ブック構成を日本語でまとめたシンプルなレポートを返す。"""
+
+    generated_at = datetime.now().strftime("%Y-%m-%d %H:%M")
+    lines = [
+        "Modern Excel PMS 生成レポート",
+        "----------------------------",
+        f"生成日時: {generated_at}",
+        f"ブック出力先: {workbook_path}",
+        f"PRJ シート数: {project_count}",
+        f"サンプルデータ: {'全てのPRJに配置' if sample_all_projects else ('最初の1枚に配置' if sample_first_project else 'なし')}",
+        "",
+        "案件一覧:",
+    ]
+
+    for case_id, name in CASES:
+        lines.append(f"  - {case_id}: {name}")
+
+    lines.append("")
+    lines.append("施策一覧:")
+    for mid, cid, name, start, sheet_name in MEASURES:
+        lines.append(f"  - {mid} ({cid}) {name} / 開始日: {start} / WBS: {sheet_name}")
+
+    lines.append("")
+    lines.append("ステータス候補:")
+    for status in STATUSES:
+        lines.append(f"  - {status}")
+
+    lines.append("")
+    lines.append("担当者マスタ:")
+    for member in MEMBERS:
+        lines.append(f"  - {member}")
+
+    return lines
+
+
+def write_report_text(lines: Sequence[str], output_path: Path) -> None:
+    """レポートテキストを UTF-8 で書き出す。"""
+
+    output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _escape_pdf_text(text: str) -> str:
+    """PDF 文字列リテラル向けのエスケープ処理。"""
+
+    sanitized = text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+    return sanitized
+
+
+def export_pdf_report(lines: Sequence[str], output_path: Path) -> None:
+    """標準フォントのみで構成したシンプルな PDF を生成する。"""
+
+    page_height = 842  # A4 高さ (pt)
+    margin_left = 50
+    margin_top = 50
+    line_height = 16
+
+    content_lines: List[str] = ["BT", "/F1 12 Tf"]
+    y_cursor = page_height - margin_top
+    for line in lines:
+        escaped = _escape_pdf_text(line)
+        content_lines.append(f"1 0 0 1 {margin_left} {y_cursor} Tm ({escaped}) Tj")
+        y_cursor -= line_height
+        if y_cursor < margin_top:
+            break  # 1 ページのみサポート
+    content_lines.append("ET")
+    content_stream = "\n".join(content_lines).encode("utf-8")
+
+    objects: List[bytes] = []
+    objects.append(b"1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n")
+    objects.append(b"2 0 obj<< /Type /Pages /Count 1 /Kids [3 0 R] >>endobj\n")
+    objects.append(
+        b"3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] "
+        b"/Contents 4 0 R /Resources<< /Font << /F1 5 0 R >> >> >>endobj\n"
+    )
+    objects.append(
+        f"4 0 obj<< /Length {len(content_stream)} >>stream\n".encode("utf-8")
+        + content_stream
+        + b"\nendstream\nendobj\n"
+    )
+    objects.append(b"5 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj\n")
+
+    # クロスリファレンスを組み立てる
+    offsets = []
+    position = len(b"%PDF-1.4\n")
+    for obj in objects:
+        offsets.append(position)
+        position += len(obj)
+
+    xref_entries = ["0000000000 65535 f "]
+    for offset in offsets:
+        xref_entries.append(f"{offset:010} 00000 n ")
+    xref_content = "\n".join(xref_entries) + "\n"
+
+    trailer = (
+        f"<< /Root 1 0 R /Size {len(objects) + 1} >>\nstartxref\n{position}\n%%EOF"
+    )
+
+    pdf_binary = b"".join(
+        [
+            b"%PDF-1.4\n",
+            *objects,
+            b"xref\n0 ",
+            str(len(objects) + 1).encode("utf-8"),
+            b"\n",
+            xref_content.encode("utf-8"),
+            b"trailer\n",
+            trailer.encode("utf-8"),
+        ]
+    )
+
+    output_path.write_bytes(pdf_binary)
+
+
 # --------------------------- メイン ---------------------------
 
 def build_workbook(
@@ -544,8 +667,8 @@ def build_workbook(
     sample_first_project: bool,
     sample_all_projects: bool,
     output_path: Path,
-) -> None:
-    """指定した枚数の PRJ シートを生成してブックを書き出す。"""
+) -> List[str]:
+    """指定した枚数の PRJ シートを生成してブックを書き出し、レポート用テキストを返す。"""
 
     # Config / Template
     sheet_names = ["Config", "Template"]
@@ -583,6 +706,8 @@ def build_workbook(
 
     print(f"ブックを生成しました: {output_path}")
 
+    return generate_report_lines(project_count, sample_first_project, sample_all_projects, output_path)
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Modern Excel PMS 雛形を生成する")
@@ -603,8 +728,26 @@ def main() -> None:
         default=OUTPUT_PATH,
         help="出力先パス (.xlsm)",
     )
+    parser.add_argument(
+        "--report-output",
+        type=Path,
+        help="ブック構成レポートを書き出すパス (.md や .txt を想定)",
+    )
+    parser.add_argument(
+        "--pdf-output",
+        type=Path,
+        help="レポート PDF を書き出すパス",
+    )
     args = parser.parse_args()
-    build_workbook(args.projects, args.sample_first, args.sample_all, args.output)
+    report_lines = build_workbook(args.projects, args.sample_first, args.sample_all, args.output)
+
+    if args.report_output:
+        write_report_text(report_lines, args.report_output)
+        print(f"レポートを出力しました: {args.report_output}")
+
+    if args.pdf_output:
+        export_pdf_report(report_lines, args.pdf_output)
+        print(f"PDF レポートを出力しました: {args.pdf_output}")
 
 
 if __name__ == "__main__":
