@@ -339,7 +339,7 @@ def case_master_sheet() -> str:
 
     data_validations = (
         "<dataValidations count='1'>"
-        "<dataValidation type='list' allowBlank='1' showDropDown='1' sqref='H1'>"
+        "<dataValidation type='list' allowBlank='1' showDropDown='1' showErrorMessage='1' errorStyle='stop' errorTitle='入力エラー' error='リストから選択してください' sqref='H1'>"
         "<formula1>Case_Master!$A$2:$A$100</formula1>"
         "</dataValidation>"
         "</dataValidations>"
@@ -368,13 +368,13 @@ def measure_master_sheet() -> str:
                 (idx, 4, start),
                 (idx, 6, sheet_name),
                 (idx, 5, Formula(f"HYPERLINK(\"#'\" & F{idx} & \"'!A1\", \"WBSを開く\")")),
-                (idx, 7, Formula(f"INDIRECT(\"'\" & F{idx} & \"'!J2\")")),
+                (idx, 7, Formula(f"IFERROR(INDIRECT(\"'\" & F{idx} & \"'!J2\"),\"未リンク\")")),
             ]
         )
 
     data_validations = (
         "<dataValidations count='1'>"
-        "<dataValidation type='list' allowBlank='1' showDropDown='1' sqref='B2:B104'>"
+        "<dataValidation type='list' allowBlank='1' showDropDown='1' showErrorMessage='1' errorStyle='stop' errorTitle='入力エラー' error='リストから選択してください' sqref='B2:B104'>"
         "<formula1>Case_Master!$A$2:$A$100</formula1>"
         "</dataValidation>"
         "</dataValidations>"
@@ -394,10 +394,10 @@ def kanban_sheet() -> str:
     ]
 
     formula_template = (
-        "IF($B$2=\"\",\"\",LET(_s,$B$2,_tasks,INDIRECT(\"'\"&_s&\"'!B5:B104\"),"
+        "IF($B$2=\"\",\"\",IFERROR(LET(_s,$B$2,_tasks,INDIRECT(\"'\"&_s&\"'!B5:B104\"),"
         "_owners,INDIRECT(\"'\"&_s&\"'!C5:C104\"),_due,INDIRECT(\"'\"&_s&\"'!F5:F104\"),"
         "_status,INDIRECT(\"'\"&_s&\"'!H5:H104\"),_filtered,FILTER(HSTACK(_tasks,_owners,_due),_status=\"{status}\"),"
-        "MAP(INDEX(_filtered,,1),INDEX(_filtered,,2),INDEX(_filtered,,3),LAMBDA(t,o,d,t&CHAR(10)&o&CHAR(10)&TEXT(d,\"yyyy-mm-dd\")))))"
+        "MAP(INDEX(_filtered,,1),INDEX(_filtered,,2),INDEX(_filtered,,3),LAMBDA(t,o,d,t&CHAR(10)&o&CHAR(10)&TEXT(d,\"yyyy-mm-dd\"))))),\"選択したWBSシートが見つかりません\"))"
     )
 
     cells.append((5, 2, Formula(formula_template.format(status="未着手"))))
@@ -406,7 +406,7 @@ def kanban_sheet() -> str:
 
     data_validations = (
         "<dataValidations count='1'>"
-        "<dataValidation type='list' allowBlank='1' showDropDown='1' sqref='B2'>"
+        "<dataValidation type='list' allowBlank='1' showDropDown='1' showErrorMessage='1' errorStyle='stop' errorTitle='入力エラー' error='リストから選択してください' sqref='B2'>"
         "<formula1>Measure_Master!$F$2:$F$20</formula1>"
         "</dataValidation>"
         "</dataValidations>"
