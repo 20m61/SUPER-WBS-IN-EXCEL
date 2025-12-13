@@ -1,6 +1,12 @@
 Attribute VB_Name = "ThisWorkbook"
 Option Explicit
 
+' ブックを開いた際にシート保護を再適用する
+' UserInterfaceOnly は保存時に失われるため、Open イベントで再設定が必要
+Private Sub Workbook_Open()
+    modProtection.ProtectAllSheets
+End Sub
+
 ' 既存の PRJ_xxx シートを走査して次の採番を返す
 Public Function NextProjectSheetName() As String
     Dim ws As Worksheet
