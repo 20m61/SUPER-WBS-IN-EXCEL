@@ -359,7 +359,7 @@ def case_master_sheet() -> str:
 
     data_validations = (
         "<dataValidations count='1'>"
-        "<dataValidation type='list' allowBlank='1' showDropDown='1' showErrorMessage='1' errorStyle='stop' errorTitle='入力エラー' error='リストから選択してください' sqref='H1'>"
+        "<dataValidation type='list' allowBlank='1' showDropDown='1' showErrorMessage='1' showInputMessage='1' errorStyle='stop' errorTitle='入力エラー' error='リストから選択してください' promptTitle='案件IDの選択' prompt='プルダウンから案件IDを選択してください' sqref='H1'>"
         "<formula1>Case_Master!$A$2:$A$100</formula1>"
         "</dataValidation>"
         "</dataValidations>"
@@ -388,13 +388,13 @@ def measure_master_sheet() -> str:
                 (idx, 4, start),
                 (idx, 6, sheet_name),
                 (idx, 5, Formula(f"HYPERLINK(\"#'\" & F{idx} & \"'!A1\", \"WBSを開く\")")),
-                (idx, 7, Formula(f"IFERROR(INDIRECT(\"'\" & F{idx} & \"'!J2\"),\"未リンク\")")),
+                (idx, 7, Formula(f"IF(F{idx}=\"\",\"\",IFERROR(INDIRECT(\"'\" & F{idx} & \"'!J2\"),\"未リンク\"))")),
             ]
         )
 
     data_validations = (
         "<dataValidations count='1'>"
-        "<dataValidation type='list' allowBlank='1' showDropDown='1' showErrorMessage='1' errorStyle='stop' errorTitle='入力エラー' error='リストから選択してください' sqref='B2:B104'>"
+        "<dataValidation type='list' allowBlank='0' showDropDown='1' showErrorMessage='1' showInputMessage='1' errorStyle='stop' errorTitle='入力エラー' error='リスト外の値は入力できません' promptTitle='案件IDの選択' prompt='プルダウンから案件IDを選択してください' sqref='B2:B104'>"
         "<formula1>Case_Master!$A$2:$A$100</formula1>"
         "</dataValidation>"
         "</dataValidations>"
@@ -426,7 +426,7 @@ def kanban_sheet() -> str:
 
     data_validations = (
         "<dataValidations count='1'>"
-        "<dataValidation type='list' allowBlank='1' showDropDown='1' showErrorMessage='1' errorStyle='stop' errorTitle='入力エラー' error='リストから選択してください' sqref='B2'>"
+        "<dataValidation type='list' allowBlank='1' showDropDown='1' showErrorMessage='1' showInputMessage='1' errorStyle='stop' errorTitle='入力エラー' error='リスト外の値は入力できません' promptTitle='WBS シート名の選択' prompt='プルダウンから施策の WBS シート名を選択してください' sqref='B2'>"
         "<formula1>Measure_Master!$F$2:$F$20</formula1>"
         "</dataValidation>"
         "</dataValidations>"
