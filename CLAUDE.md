@@ -60,9 +60,22 @@ No external Python dependencies required - the build script uses only the standa
 - Creates all sheets with formulas, data validations, conditional formatting
 - Embeds VBA from `docs/vba/*.bas` files
 - Applies sheet protection with password hash
+- Generates Up/Down buttons (VML Form Controls) on Template and PRJ sheets
 - Outputs progress report in Markdown and/or PDF format
 
 Modify sheet content by editing the `*_sheet()` functions and `template_cells()` in the build script.
+
+### Up/Down Buttons (VML DrawingObjects)
+
+Template and PRJ_xxx sheets include two buttons for row manipulation:
+- **▲ Up**: Calls `modWbsCommands.MoveTaskRowUp` to swap the selected row with the row above
+- **▼ Down**: Calls `modWbsCommands.MoveTaskRowDown` to swap the selected row with the row below
+
+Implementation:
+- `ButtonDefinition` dataclass defines button properties (position, size, macro name)
+- `vml_drawing_xml()` generates VML XML for Excel Form Controls
+- Each sheet with buttons gets its own `xl/drawings/vmlDrawingN.vml` file
+- Worksheet references VML via `<legacyDrawing r:id="..."/>` and `xl/worksheets/_rels/sheetN.xml.rels`
 
 ## Report Generation
 

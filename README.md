@@ -154,10 +154,19 @@ Excel 単体で Jira や Asana に近い UX を実現することを目的にし
 以前は自動生成した雛形ブック `ModernExcelPMS.xlsx` を同梱していましたが、バイナリのため変更差分が把握しづらく、同期が困難なことからリポジトリには含めない方針にしました。必要に応じて以下の手順でいつでも再生成できます。
 
 ```bash
-python tools/build_workbook.py
+# 通常版（互換性重視）
+python tools/build_workbook.py --output output/ModernExcelPMS.xlsx
+
+# M365専用版（FILTER/LET対応、SharePoint向け）
+python tools/build_workbook.py --m365 --output output/ModernExcelPMS_M365.xlsx
+
+# VBA付き版（デスクトップ Excel のみ）
+python tools/build_workbook.py --with-vba --output output/ModernExcelPMS_with_vba.xlsm
 ```
 
-実行するとリポジトリ直下にマクロ有効ブック `ModernExcelPMS.xlsm` が生成されます（`.gitignore` で除外済み）。既存ファイルがあれば同名で上書きされるため、再作成時は上記コマンドを実行してください。生成されるブックの主な内容は以下の通りです。
+**SharePoint で共有する場合は `--m365` オプションを使用してください。** M365版では FILTER/LET を使ったカンバンの詳細カード表示とCase_Masterのドリルダウン機能が有効になります。
+
+実行するとリポジトリ直下にブックが生成されます（`.gitignore` で除外済み）。既存ファイルがあれば同名で上書きされるため、再作成時は上記コマンドを実行してください。生成されるブックの主な内容は以下の通りです。
 
 - **Config**: 祝日・担当者・ステータス候補のサンプルを収録。
 - **Template / PRJ_001**: WBS テーブル（Lv/タスク/担当/開始日/工数/終了日/進捗率/ステータス/備考）と、`WORKDAY`・`IFS`・工数加重平均による全体進捗率計算を備えた自動計算。
